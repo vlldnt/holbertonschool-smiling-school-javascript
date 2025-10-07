@@ -205,6 +205,14 @@ function loadVideos() {
         $track.append($videoCard);
       });
 
+      // Duplicate first 3 videos at the end for smooth infinite loop
+      for (var i = 0; i < 3; i++) {
+        var $videoCard = createVideoCard(data[i])
+          .removeClass("col-12 col-sm-6 col-md-6 col-lg-3")
+          .addClass("carousel-video-item carousel-clone");
+        $track.append($videoCard);
+      }
+
       $carouselItem.append($track);
       $("#videos-carousel").append($carouselItem);
 
@@ -235,8 +243,6 @@ function initVideoCarousel(totalVideos) {
   if ($items.length === 0) return;
 
   var currentIndex = 0;
-  var itemsVisible = 4;
-  var maxIndex = totalVideos - itemsVisible;
 
   var getItemWidth = function () {
     var item = $items[0];
@@ -246,35 +252,54 @@ function initVideoCarousel(totalVideos) {
     return rect.width + marginRight;
   };
 
-  // Update carousel position
-  var updateCarousel = function () {
+  var updateCarousel = function (animate) {
     var itemWidth = getItemWidth();
     var offset = currentIndex * itemWidth;
-    $track.css("transform", "translateX(-" + offset + "px)");
+
+    if (animate === false) {
+      $track.css("transition", "none");
+      $track.css("transform", "translateX(-" + offset + "px)");
+      // Force reflow
+      $track[0].offsetHeight;
+      $track.css("transition", "transform 0.4s ease-in-out");
+    } else {
+      $track.css("transform", "translateX(-" + offset + "px)");
+    }
   };
 
-  // Remove Bootstrap config and  add custom controls
   $("#carouselExampleControls2 .carousel-control-prev")
     .off("click")
     .on("click", function (e) {
       e.preventDefault();
-      if (currentIndex > 0) {
-        currentIndex--;
-        updateCarousel();
+      currentIndex--;
+
+      if (currentIndex < 0) {
+        currentIndex = totalVideos - 1;
+        updateCarousel(false);
+        return;
       }
+
+      updateCarousel(true);
     });
 
   $("#carouselExampleControls2 .carousel-control-next")
     .off("click")
     .on("click", function (e) {
       e.preventDefault();
-      if (currentIndex < maxIndex) {
-        currentIndex++;
-        updateCarousel();
+      currentIndex++;
+      updateCarousel(true);
+
+      if (currentIndex >= totalVideos) {
+        setTimeout(function () {
+          currentIndex = 0;
+          updateCarousel(false);
+        }, 400);
       }
     });
 
-  updateCarousel();
+  updateCarousel(false);
 
-  $(window).on("resize", updateCarousel);
+  $(window).on("resize", function () {
+    updateCarousel(false);
+  });
 }
