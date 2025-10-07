@@ -7,6 +7,10 @@ $(document).ready(function () {
     loadVideos();
   }
 
+  if ($("#latest-videos-carousel").length) {
+    loadLatestVideos();
+  }
+
   $('a[href^="#"]').on("click", function (event) {
     if ($($(this).attr("href")).length) {
       event.preventDefault();
@@ -178,7 +182,7 @@ function createVideoCard(video) {
     );
 }
 
-//  fetch Videos from URL
+//  TUTORIALS VIDEOS
 function loadVideos() {
   toggleLoader(true, ".popular");
 
@@ -283,6 +287,132 @@ function initVideoCarousel(totalVideos) {
     });
 
   $("#carouselExampleControls2 .carousel-control-next")
+    .off("click")
+    .on("click", function (e) {
+      e.preventDefault();
+      currentIndex++;
+      updateCarousel(true);
+
+      if (currentIndex >= totalVideos) {
+        setTimeout(function () {
+          currentIndex = 0;
+          updateCarousel(false);
+        }, 400);
+      }
+    });
+
+  updateCarousel(false);
+
+  $(window).on("resize", function () {
+    updateCarousel(false);
+  });
+}
+
+// LASTEST VIDEOS
+function loadLatestVideos() {
+  toggleLoader(true, ".popular");
+
+  $("#carouselExampleControls3").fadeOut(300);
+
+  $.ajax({
+    url: "https://smileschool-api.hbtn.info/latest-videos",
+    method: "GET",
+    dataType: "json",
+    beforeSend: function () {
+      $("#latest-videos-carousel").empty();
+    },
+  })
+    .done(function (data) {
+      var $carouselItem = $("<div>").addClass("carousel-item active");
+      var $track = $("<div>")
+        .addClass("carousel-track")
+        .attr("id", "latest-videos-track");
+
+      $.each(data, function (_index, video) {
+        var $videoCard = createVideoCard(video)
+          .removeClass("col-12 col-sm-6 col-md-6 col-lg-3")
+          .addClass("carousel-video-item");
+        $track.append($videoCard);
+      });
+
+      // Duplicate first 3 videos at the end for smooth infinite loop
+      for (var i = 0; i < 3; i++) {
+        var $videoCard = createVideoCard(data[i])
+          .removeClass("col-12 col-sm-6 col-md-6 col-lg-3")
+          .addClass("carousel-video-item carousel-clone");
+        $track.append($videoCard);
+      }
+
+      $carouselItem.append($track);
+      $("#latest-videos-carousel").append($carouselItem);
+
+      initLatestVideoCarousel(data.length);
+
+      toggleLoader(false, ".popular");
+      $("#carouselExampleControls3").fadeIn(300);
+    })
+    .fail(function () {
+      $("#latest-videos-carousel")
+        .empty()
+        .append(
+          $('<div class="text-white text-center p-5">').text(
+            "Error while loading videos"
+          )
+        );
+
+      toggleLoader(false, ".popular");
+      $("#carouselExampleControls3").fadeIn(300);
+    });
+}
+
+// Initialize custom carousel navigation for latest videos
+function initLatestVideoCarousel(totalVideos) {
+  var $track = $("#latest-videos-track");
+  var $items = $track.find(".carousel-video-item");
+
+  if ($items.length === 0) return;
+
+  var currentIndex = 0;
+
+  var getItemWidth = function () {
+    var item = $items[0];
+    var rect = item.getBoundingClientRect();
+    var style = window.getComputedStyle(item);
+    var marginRight = parseFloat(style.marginRight);
+    return rect.width + marginRight;
+  };
+
+  var updateCarousel = function (animate) {
+    var itemWidth = getItemWidth();
+    var offset = currentIndex * itemWidth;
+
+    if (animate === false) {
+      $track.css("transition", "none");
+      $track.css("transform", "translateX(-" + offset + "px)");
+      // Force reflow
+      $track[0].offsetHeight;
+      $track.css("transition", "transform 0.4s ease-in-out");
+    } else {
+      $track.css("transform", "translateX(-" + offset + "px)");
+    }
+  };
+
+  $("#carouselExampleControls3 .carousel-control-prev")
+    .off("click")
+    .on("click", function (e) {
+      e.preventDefault();
+      currentIndex--;
+
+      if (currentIndex < 0) {
+        currentIndex = totalVideos - 1;
+        updateCarousel(false);
+        return;
+      }
+
+      updateCarousel(true);
+    });
+
+  $("#carouselExampleControls3 .carousel-control-next")
     .off("click")
     .on("click", function (e) {
       e.preventDefault();
