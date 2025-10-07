@@ -3,6 +3,10 @@ $(document).ready(function () {
     loadQuotes();
   }
 
+  if ($("#videos-carousel").length) {
+    loadVideos();
+  }
+
   $('a[href^="#"]').on("click", function (event) {
     if ($($(this).attr("href")).length) {
       event.preventDefault();
@@ -18,13 +22,18 @@ $(document).ready(function () {
   });
 });
 
-// Show circle loader
+// Show or hide the loader.
 function toggleLoader(show, section) {
-  section = section || ".quotes";
-  $(section).find(".loader").toggle(show);
+  const $loader = section ? $(section).find(".loader") : $(".loader");
+
+  if (show) {
+    $loader.show();
+  } else {
+    $loader.hide();
+  }
 }
 
-// CRation of the item
+// CReation of the item
 function createQuoteItem(quote, index) {
   return $('<div class="carousel-item">')
     .addClass(index === 0 ? "active" : "")
@@ -58,7 +67,7 @@ function createQuoteItem(quote, index) {
 
 // Fecth quotes from URL
 function loadQuotes() {
-  toggleLoader(true);
+  toggleLoader(true, ".quotes");
 
   $("#carouselExampleControls").fadeOut(300);
 
@@ -75,21 +84,197 @@ function loadQuotes() {
         $("#quotes-carousel").append(createQuoteItem(quote, index));
       });
 
-      toggleLoader(false);
+      toggleLoader(false, ".quotes");
       $("#carouselExampleControls").fadeIn(300);
     })
-    .fail(function (xhr, status, error) {
-      console.error("Loading Error", error);
-
+    .fail(function () {
       $("#quotes-carousel")
         .empty()
         .append(
           $('<div class="text-white text-center p-5">').text(
-            "Erreur lors du chargement des citations"
+            "Error while loading quotes"
           )
         );
 
-      toggleLoader(false);
+      toggleLoader(false, ".quotes");
       $("#carouselExampleControls").fadeIn(300);
     });
+}
+
+// creation of the rating system with stars
+function importStars(rating) {
+  const $stars = $("<div>");
+  for (let i = 0; i < 5; i++) {
+    $stars.append(
+      $("<img>")
+        .attr("src", i < rating ? "images/star_on.png" : "images/star_off.png")
+        .attr("alt", "star")
+        .attr("width", "15px")
+    );
+  }
+  return $stars;
+}
+
+// Create video card item
+function createVideoCard(video) {
+  return $("<div>")
+    .addClass(
+      "col-12 col-sm-6 col-md-6 col-lg-3 d-flex justify-content-center justify-content-md-end justify-content-lg-center"
+    )
+    .append(
+      $("<div>")
+        .addClass("card")
+        .append(
+          $("<img>")
+            .addClass("card-img-top")
+            .attr("src", video.thumb_url)
+            .attr("alt", "Video thumbnail")
+        )
+        .append(
+          $("<div>")
+            .addClass("card-img-overlay text-center")
+            .append(
+              $("<img>")
+                .addClass("align-self-center play-overlay")
+                .attr("src", "images/play.png")
+                .attr("alt", "Play")
+                .attr("width", "64px")
+            )
+        )
+        .append(
+          $("<div>")
+            .addClass("card-body")
+            .append(
+              $("<h5>")
+                .addClass("card-title font-weight-bold")
+                .text(video.title)
+            )
+            .append(
+              $("<p>").addClass("card-text text-muted").text(video["sub-title"])
+            )
+            .append(
+              $("<div>")
+                .addClass("creator d-flex align-items-center")
+                .append(
+                  $("<img>")
+                    .addClass("rounded-circle")
+                    .attr("src", video.author_pic_url)
+                    .attr("alt", "Creator of Video")
+                    .attr("width", "30px")
+                )
+                .append(
+                  $("<h6>").addClass("pl-3 m-0 main-color").text(video.author)
+                )
+            )
+            .append(
+              $("<div>")
+                .addClass("info pt-3 d-flex justify-content-between")
+                .append(
+                  $("<div>").addClass("rating").append(importStars(video.star))
+                )
+                .append($("<span>").addClass("main-color").text(video.duration))
+            )
+        )
+    );
+}
+
+//  fetch Videos from URL
+function loadVideos() {
+  toggleLoader(true, ".popular");
+
+  $("#carouselExampleControls2").fadeOut(300);
+
+  $.ajax({
+    url: "https://smileschool-api.hbtn.info/popular-tutorials",
+    method: "GET",
+    dataType: "json",
+    beforeSend: function () {
+      $("#videos-carousel").empty();
+    },
+  })
+    .done(function (data) {
+      var $carouselItem = $("<div>").addClass("carousel-item active");
+      var $track = $("<div>")
+        .addClass("carousel-track")
+        .attr("id", "videos-track");
+
+      $.each(data, function (_index, video) {
+        var $videoCard = createVideoCard(video)
+          .removeClass("col-12 col-sm-6 col-md-6 col-lg-3")
+          .addClass("carousel-video-item");
+        $track.append($videoCard);
+      });
+
+      $carouselItem.append($track);
+      $("#videos-carousel").append($carouselItem);
+
+      initVideoCarousel(data.length);
+
+      toggleLoader(false, ".popular");
+      $("#carouselExampleControls2").fadeIn(300);
+    })
+    .fail(function () {
+      $("#videos-carousel")
+        .empty()
+        .append(
+          $('<div class="text-white text-center p-5">').text(
+            "Error while loading videos"
+          )
+        );
+
+      toggleLoader(false, ".popular");
+      $("#carouselExampleControls2").fadeIn(300);
+    });
+}
+
+// Initialize custom carousel navigation for videos
+function initVideoCarousel(totalVideos) {
+  var $track = $("#videos-track");
+  var $items = $track.find(".carousel-video-item");
+
+  if ($items.length === 0) return;
+
+  var currentIndex = 0;
+  var itemsVisible = 4;
+  var maxIndex = totalVideos - itemsVisible;
+
+  var getItemWidth = function () {
+    var item = $items[0];
+    var rect = item.getBoundingClientRect();
+    var style = window.getComputedStyle(item);
+    var marginRight = parseFloat(style.marginRight);
+    return rect.width + marginRight;
+  };
+
+  // Update carousel position
+  var updateCarousel = function () {
+    var itemWidth = getItemWidth();
+    var offset = currentIndex * itemWidth;
+    $track.css("transform", "translateX(-" + offset + "px)");
+  };
+
+  // Remove Bootstrap config and  add custom controls
+  $("#carouselExampleControls2 .carousel-control-prev")
+    .off("click")
+    .on("click", function (e) {
+      e.preventDefault();
+      if (currentIndex > 0) {
+        currentIndex--;
+        updateCarousel();
+      }
+    });
+
+  $("#carouselExampleControls2 .carousel-control-next")
+    .off("click")
+    .on("click", function (e) {
+      e.preventDefault();
+      if (currentIndex < maxIndex) {
+        currentIndex++;
+        updateCarousel();
+      }
+    });
+
+  updateCarousel();
+
+  $(window).on("resize", updateCarousel);
 }
