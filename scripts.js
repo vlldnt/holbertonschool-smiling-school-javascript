@@ -265,29 +265,55 @@ function populateDropdowns(topics, sorts, selectedTopic, selectedSort) {
   currentFilters.topic = selectedTopic;
   currentFilters.sort = selectedSort;
 
-  $(".box2 .dropdown-menu").empty().append(topics.map((t) => `<a class="dropdown-item" data-value="${t}">${capitalize(t)}</a>`));
-  $(".box3 .dropdown-menu").empty().append(sorts.map((s) => `<a class="dropdown-item" data-value="${s}">${formatSort(s)}</a>`));
+  $(".box2 .dropdown-menu")
+    .empty()
+    .append(
+      topics.map(
+        (t) => `<a class="dropdown-item" data-value="${t}">${capitalize(t)}</a>`
+      )
+    );
+  $(".box3 .dropdown-menu")
+    .empty()
+    .append(
+      sorts.map(
+        (s) => `<a class="dropdown-item" data-value="${s}">${formatSort(s)}</a>`
+      )
+    );
 
   $(".box2 .dropdown-toggle span").text(capitalize(selectedTopic));
   $(".box3 .dropdown-toggle span").text(formatSort(selectedSort));
 
-  $(".box2 .dropdown-item").off("click").on("click", function (e) {
-    e.preventDefault();
-    currentFilters.topic = $(this).attr("data-value");
-    $(".box2 .dropdown-toggle span").text($(this).text());
-    loadCourses($(".search-text-area").val(), currentFilters.topic, currentFilters.sort);
-  });
+  $(".box2 .dropdown-item")
+    .off("click")
+    .on("click", function (e) {
+      e.preventDefault();
+      currentFilters.topic = $(this).attr("data-value");
+      $(".box2 .dropdown-toggle span").text($(this).text());
+      loadCourses(
+        $(".search-text-area").val(),
+        currentFilters.topic,
+        currentFilters.sort
+      );
+    });
 
-  $(".box3 .dropdown-item").off("click").on("click", function (e) {
-    e.preventDefault();
-    currentFilters.sort = $(this).attr("data-value");
-    $(".box3 .dropdown-toggle span").text($(this).text());
-    loadCourses($(".search-text-area").val(), currentFilters.topic, currentFilters.sort);
-  });
+  $(".box3 .dropdown-item")
+    .off("click")
+    .on("click", function (e) {
+      e.preventDefault();
+      currentFilters.sort = $(this).attr("data-value");
+      $(".box3 .dropdown-toggle span").text($(this).text());
+      loadCourses(
+        $(".search-text-area").val(),
+        currentFilters.topic,
+        currentFilters.sort
+      );
+    });
 
-  $(".search-text-area").off("input").on("input", function () {
-    loadCourses($(this).val(), currentFilters.topic, currentFilters.sort);
-  });
+  $(".search-text-area")
+    .off("input")
+    .on("input", function () {
+      loadCourses($(this).val(), currentFilters.topic, currentFilters.sort);
+    });
 }
 
 // Display courses
