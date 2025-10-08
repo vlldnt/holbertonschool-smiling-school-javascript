@@ -1,435 +1,299 @@
-$(document).ready(function () {
-  if ($("#quotes-carousel").length) {
-    loadQuotes();
-  }
+// Initialize page: load carousels and setup smooth scrolling
+$(function () {
+  $("#quotes-carousel").length && loadQuotes();
+  $("#videos-carousel").length && loadVideos();
+  $("#latest-videos-carousel").length && loadLatestVideos();
+  $(".results .row").length && $(".search").length && loadCourses();
 
-  if ($("#videos-carousel").length) {
-    loadVideos();
-  }
-
-  if ($("#latest-videos-carousel").length) {
-    loadLatestVideos();
-  }
-
-  $('a[href^="#"]').on("click", function (event) {
-    if ($($(this).attr("href")).length) {
-      event.preventDefault();
+  $('a[href^="#"]').on("click", function (e) {
+    var $target = $($(this).attr("href"));
+    $target.length &&
+      (e.preventDefault(),
       $("html, body")
         .stop()
-        .animate(
-          {
-            scrollTop: $($(this).attr("href")).offset().top,
-          },
-          1000
-        );
-    }
+        .animate({ scrollTop: $target.offset().top }, 1000));
   });
 });
 
-// Show or hide the loader.
+// Toggle loader visibility
 function toggleLoader(show, section) {
-  const $loader = section ? $(section).find(".loader") : $(".loader");
-
-  if (show) {
-    $loader.show();
-  } else {
-    $loader.hide();
-  }
+  (section ? $(section).find(".loader") : $(".loader")).toggle(show);
 }
 
-// CReation of the item
+// Fetch JSON data from API
+function fetchData(url) {
+  return $.get(url);
+}
+
+// Create quote carousel item
 function createQuoteItem(quote, index) {
-  return $('<div class="carousel-item">')
-    .addClass(index === 0 ? "active" : "")
-    .append(
-      $('<div class="row mx-auto align-items-center">')
-        .append(
-          $(
-            '<div class="col-12 col-sm-2 col-lg-2 offset-lg-1 text-center">'
-          ).append(
-            $('<img class="d-block align-self-center">')
-              .attr("src", quote.pic_url)
-              .attr("alt", quote.name)
-          )
-        )
-        .append(
-          $(
-            '<div class="col-12 col-sm-7 offset-sm-2 col-lg-9 offset-lg-0">'
-          ).append(
-            $('<div class="quote-text">')
-              .append(
-                $('<p class="text-white">').text("« " + quote.text + " »")
-              )
-              .append(
-                $('<h4 class="text-white font-weight-bold">').text(quote.name)
-              )
-              .append($('<span class="text-white">').text(quote.title))
-          )
-        )
-    );
+  return $(`<div class="carousel-item ${!index ? "active" : ""}">
+    <div class="row mx-auto align-items-center">
+      <div class="col-12 col-sm-2 col-lg-2 offset-lg-1 text-center">
+        <img class="d-block align-self-center" src="${quote.pic_url}" alt="${
+    quote.name
+  }">
+      </div>
+      <div class="col-12 col-sm-7 offset-sm-2 col-lg-9 offset-lg-0">
+        <div class="quote-text">
+          <p class="text-white">« ${quote.text} »</p>
+          <h4 class="text-white font-weight-bold">${quote.name}</h4>
+          <span class="text-white">${quote.title}</span>
+        </div>
+      </div>
+    </div>
+  </div>`);
 }
 
-// Fecth quotes from URL
+// Load quotes from API
 function loadQuotes() {
   toggleLoader(true, ".quotes");
-
   $("#carouselExampleControls").fadeOut(300);
-
-  $.ajax({
-    url: "https://smileschool-api.hbtn.info/quotes",
-    method: "GET",
-    dataType: "json",
-    beforeSend: function () {
-      $("#quotes-carousel").empty();
-    },
-  })
-    .done(function (data) {
-      $.each(data, function (index, quote) {
-        $("#quotes-carousel").append(createQuoteItem(quote, index));
-      });
-
+  fetchData("https://smileschool-api.hbtn.info/quotes")
+    .done((data) => {
+      var $carousel = $("#quotes-carousel").empty();
+      $.each(data, (i, q) => $carousel.append(createQuoteItem(q, i)));
       toggleLoader(false, ".quotes");
       $("#carouselExampleControls").fadeIn(300);
     })
-    .fail(function () {
+    .fail(() => {
       $("#quotes-carousel")
         .empty()
         .append(
-          $('<div class="text-white text-center p-5">').text(
-            "Error while loading quotes"
+          $(
+            '<div class="text-white text-center p-5">Error while loading quotes</div>'
           )
         );
-
       toggleLoader(false, ".quotes");
       $("#carouselExampleControls").fadeIn(300);
     });
 }
 
-// creation of the rating system with stars
+// Generate star rating (0-5 stars)
 function importStars(rating) {
-  const $stars = $("<div>");
-  for (let i = 0; i < 5; i++) {
-    $stars.append(
-      $("<img>")
-        .attr("src", i < rating ? "images/star_on.png" : "images/star_off.png")
-        .attr("alt", "star")
-        .attr("width", "15px")
-    );
-  }
-  return $stars;
+  return $(
+    "<div>" +
+      Array.from(
+        { length: 5 },
+        (_, i) =>
+          `<img src="${
+            i < rating ? "images/star_on.png" : "images/star_off.png"
+          }" alt="star" width="15px">`
+      ).join("") +
+      "</div>"
+  );
 }
 
-// Create video card item
+// Create video card
 function createVideoCard(video) {
-  return $("<div>")
-    .addClass(
-      "col-12 col-sm-6 col-md-6 col-lg-3 d-flex justify-content-center justify-content-md-end justify-content-lg-center"
-    )
-    .append(
-      $("<div>")
-        .addClass("card")
-        .append(
-          $("<img>")
-            .addClass("card-img-top")
-            .attr("src", video.thumb_url)
-            .attr("alt", "Video thumbnail")
-        )
-        .append(
-          $("<div>")
-            .addClass("card-img-overlay text-center")
-            .append(
-              $("<img>")
-                .addClass("align-self-center play-overlay")
-                .attr("src", "images/play.png")
-                .attr("alt", "Play")
-                .attr("width", "64px")
-            )
-        )
-        .append(
-          $("<div>")
-            .addClass("card-body")
-            .append(
-              $("<h5>")
-                .addClass("card-title font-weight-bold")
-                .text(video.title)
-            )
-            .append(
-              $("<p>").addClass("card-text text-muted").text(video["sub-title"])
-            )
-            .append(
-              $("<div>")
-                .addClass("creator d-flex align-items-center")
-                .append(
-                  $("<img>")
-                    .addClass("rounded-circle")
-                    .attr("src", video.author_pic_url)
-                    .attr("alt", "Creator of Video")
-                    .attr("width", "30px")
-                )
-                .append(
-                  $("<h6>").addClass("pl-3 m-0 main-color").text(video.author)
-                )
-            )
-            .append(
-              $("<div>")
-                .addClass("info pt-3 d-flex justify-content-between")
-                .append(
-                  $("<div>").addClass("rating").append(importStars(video.star))
-                )
-                .append($("<span>").addClass("main-color").text(video.duration))
-            )
-        )
-    );
+  return $(`<div class="col-12 col-sm-6 col-md-6 col-lg-3 d-flex justify-content-center justify-content-md-end justify-content-lg-center">
+    <div class="card">
+      <img class="card-img-top" src="${video.thumb_url}" alt="Video thumbnail">
+      <div class="card-img-overlay text-center">
+        <img class="align-self-center play-overlay" src="images/play.png" alt="Play" width="64px">
+      </div>
+      <div class="card-body">
+        <h5 class="card-title font-weight-bold">${video.title}</h5>
+        <p class="card-text text-muted">${video["sub-title"]}</p>
+        <div class="creator d-flex align-items-center">
+          <img class="rounded-circle" src="${
+            video.author_pic_url
+          }" alt="Creator of Video" width="30px">
+          <h6 class="pl-3 m-0 main-color">${video.author}</h6>
+        </div>
+        <div class="info pt-3 d-flex justify-content-between">
+          <div class="rating">${importStars(video.star).html()}</div>
+          <span class="main-color">${video.duration}</span>
+        </div>
+      </div>
+    </div>
+  </div>`);
 }
 
-//  TUTORIALS VIDEOS
+// Load video carousel with infinite loop
+function loadVideoCarousel(config) {
+  toggleLoader(true, config.section);
+  $(config.carouselId).fadeOut(300);
+  fetchData(config.url)
+    .done((data) => {
+      var $track = $(`<div class="carousel-track" id="${config.trackId}">`);
+      $.each(data, (_, v) =>
+        $track.append(
+          createVideoCard(v)
+            .removeClass("col-12 col-sm-6 col-md-6 col-lg-3")
+            .addClass("carousel-video-item")
+        )
+      );
+      for (var i = 0; i < 3; i++)
+        $track.append(
+          createVideoCard(data[i])
+            .removeClass("col-12 col-sm-6 col-md-6 col-lg-3")
+            .addClass("carousel-video-item carousel-clone")
+        );
+      $(config.carouselContainerId)
+        .empty()
+        .append($('<div class="carousel-item active">').append($track));
+      initVideoCarouselGeneric(config.trackId, config.carouselId, data.length);
+      toggleLoader(false, config.section);
+      $(config.carouselId).fadeIn(300);
+    })
+    .fail(() => {
+      $(config.carouselContainerId)
+        .empty()
+        .append(
+          $(
+            `<div class="text-white text-center p-5">${config.errorMessage}</div>`
+          )
+        );
+      toggleLoader(false, config.section);
+      $(config.carouselId).fadeIn(300);
+    });
+}
+
+// Initialize carousel navigation
+function initVideoCarouselGeneric(trackId, carouselId, totalVideos) {
+  var $track = $("#" + trackId),
+    $items = $track.find(".carousel-video-item"),
+    currentIndex = 0;
+  if (!$items.length) return;
+
+  var getItemWidth = () =>
+    $items[0].getBoundingClientRect().width +
+    parseFloat(window.getComputedStyle($items[0]).marginRight);
+  var updateCarousel = (animate) => {
+    var offset = currentIndex * getItemWidth();
+    if (!animate) {
+      $track.css({
+        transition: "none",
+        transform: "translateX(-" + offset + "px)",
+      });
+      $track[0].offsetHeight;
+      $track.css("transition", "transform 0.4s ease-in-out");
+    } else $track.css("transform", "translateX(-" + offset + "px)");
+  };
+
+  $(carouselId + " .carousel-control-prev")
+    .off("click")
+    .on("click", (e) => {
+      e.preventDefault();
+      currentIndex--;
+      if (currentIndex < 0) {
+        currentIndex = totalVideos - 1;
+        updateCarousel(false);
+        return;
+      }
+      updateCarousel(true);
+    });
+
+  $(carouselId + " .carousel-control-next")
+    .off("click")
+    .on("click", (e) => {
+      e.preventDefault();
+      currentIndex++;
+      updateCarousel(true);
+      currentIndex >= totalVideos &&
+        setTimeout(() => {
+          currentIndex = 0;
+          updateCarousel(false);
+        }, 400);
+    });
+
+  updateCarousel(false);
+  $(window).on("resize", () => updateCarousel(false));
+}
+
+// Load popular tutorials carousel
 function loadVideos() {
-  toggleLoader(true, ".popular");
-
-  $("#carouselExampleControls2").fadeOut(300);
-
-  $.ajax({
+  loadVideoCarousel({
     url: "https://smileschool-api.hbtn.info/popular-tutorials",
-    method: "GET",
-    dataType: "json",
-    beforeSend: function () {
-      $("#videos-carousel").empty();
-    },
-  })
-    .done(function (data) {
-      var $carouselItem = $("<div>").addClass("carousel-item active");
-      var $track = $("<div>")
-        .addClass("carousel-track")
-        .attr("id", "videos-track");
-
-      $.each(data, function (_index, video) {
-        var $videoCard = createVideoCard(video)
-          .removeClass("col-12 col-sm-6 col-md-6 col-lg-3")
-          .addClass("carousel-video-item");
-        $track.append($videoCard);
-      });
-
-      // Duplicate first 3 videos at the end for smooth infinite loop
-      for (var i = 0; i < 3; i++) {
-        var $videoCard = createVideoCard(data[i])
-          .removeClass("col-12 col-sm-6 col-md-6 col-lg-3")
-          .addClass("carousel-video-item carousel-clone");
-        $track.append($videoCard);
-      }
-
-      $carouselItem.append($track);
-      $("#videos-carousel").append($carouselItem);
-
-      initVideoCarousel(data.length);
-
-      toggleLoader(false, ".popular");
-      $("#carouselExampleControls2").fadeIn(300);
-    })
-    .fail(function () {
-      $("#videos-carousel")
-        .empty()
-        .append(
-          $('<div class="text-white text-center p-5">').text(
-            "Error while loading videos"
-          )
-        );
-
-      toggleLoader(false, ".popular");
-      $("#carouselExampleControls2").fadeIn(300);
-    });
-}
-
-// Initialize custom carousel navigation for videos
-function initVideoCarousel(totalVideos) {
-  var $track = $("#videos-track");
-  var $items = $track.find(".carousel-video-item");
-
-  if ($items.length === 0) return;
-
-  var currentIndex = 0;
-
-  var getItemWidth = function () {
-    var item = $items[0];
-    var rect = item.getBoundingClientRect();
-    var style = window.getComputedStyle(item);
-    var marginRight = parseFloat(style.marginRight);
-    return rect.width + marginRight;
-  };
-
-  var updateCarousel = function (animate) {
-    var itemWidth = getItemWidth();
-    var offset = currentIndex * itemWidth;
-
-    if (animate === false) {
-      $track.css("transition", "none");
-      $track.css("transform", "translateX(-" + offset + "px)");
-      // Force reflow
-      $track[0].offsetHeight;
-      $track.css("transition", "transform 0.4s ease-in-out");
-    } else {
-      $track.css("transform", "translateX(-" + offset + "px)");
-    }
-  };
-
-  $("#carouselExampleControls2 .carousel-control-prev")
-    .off("click")
-    .on("click", function (e) {
-      e.preventDefault();
-      currentIndex--;
-
-      if (currentIndex < 0) {
-        currentIndex = totalVideos - 1;
-        updateCarousel(false);
-        return;
-      }
-
-      updateCarousel(true);
-    });
-
-  $("#carouselExampleControls2 .carousel-control-next")
-    .off("click")
-    .on("click", function (e) {
-      e.preventDefault();
-      currentIndex++;
-      updateCarousel(true);
-
-      if (currentIndex >= totalVideos) {
-        setTimeout(function () {
-          currentIndex = 0;
-          updateCarousel(false);
-        }, 400);
-      }
-    });
-
-  updateCarousel(false);
-
-  $(window).on("resize", function () {
-    updateCarousel(false);
+    section: ".popular",
+    carouselId: "#carouselExampleControls2",
+    carouselContainerId: "#videos-carousel",
+    trackId: "videos-track",
+    errorMessage: "Error while loading videos",
   });
 }
 
-// LASTEST VIDEOS
+// Load latest videos carousel
 function loadLatestVideos() {
-  toggleLoader(true, ".popular");
-
-  $("#carouselExampleControls3").fadeOut(300);
-
-  $.ajax({
+  loadVideoCarousel({
     url: "https://smileschool-api.hbtn.info/latest-videos",
-    method: "GET",
-    dataType: "json",
-    beforeSend: function () {
-      $("#latest-videos-carousel").empty();
-    },
-  })
-    .done(function (data) {
-      var $carouselItem = $("<div>").addClass("carousel-item active");
-      var $track = $("<div>")
-        .addClass("carousel-track")
-        .attr("id", "latest-videos-track");
+    section: ".popular",
+    carouselId: "#carouselExampleControls3",
+    carouselContainerId: "#latest-videos-carousel",
+    trackId: "latest-videos-track",
+    errorMessage: "Error while loading videos",
+  });
+}
 
-      $.each(data, function (_index, video) {
-        var $videoCard = createVideoCard(video)
-          .removeClass("col-12 col-sm-6 col-md-6 col-lg-3")
-          .addClass("carousel-video-item");
-        $track.append($videoCard);
-      });
-
-      // Duplicate first 3 videos at the end for smooth infinite loop
-      for (var i = 0; i < 3; i++) {
-        var $videoCard = createVideoCard(data[i])
-          .removeClass("col-12 col-sm-6 col-md-6 col-lg-3")
-          .addClass("carousel-video-item carousel-clone");
-        $track.append($videoCard);
-      }
-
-      $carouselItem.append($track);
-      $("#latest-videos-carousel").append($carouselItem);
-
-      initLatestVideoCarousel(data.length);
-
-      toggleLoader(false, ".popular");
-      $("#carouselExampleControls3").fadeIn(300);
+// Load courses with filters
+function loadCourses(q = "", topic = "", sort = "") {
+  toggleLoader(true, ".results");
+  fetchData(
+    "https://smileschool-api.hbtn.info/courses?q=" +
+      encodeURIComponent(q) +
+      "&topic=" +
+      encodeURIComponent(topic) +
+      "&sort=" +
+      encodeURIComponent(sort)
+  )
+    .done((data) => {
+      populateDropdowns(data.topics, data.sorts, data.topic, data.sort);
+      displayCourses(data.courses);
+      $(".search-text-area").val(data.q);
+      $(".video-count").text(
+        data.courses.length + " video" + (data.courses.length > 1 ? "s" : "")
+      );
+      toggleLoader(false, ".results");
     })
-    .fail(function () {
-      $("#latest-videos-carousel")
+    .fail(() => {
+      $(".results .row")
         .empty()
-        .append(
-          $('<div class="text-white text-center p-5">').text(
-            "Error while loading videos"
-          )
-        );
-
-      toggleLoader(false, ".popular");
-      $("#carouselExampleControls3").fadeIn(300);
+        .append($('<div class="text-center p-5">Error loading courses</div>'));
+      toggleLoader(false, ".results");
     });
 }
 
-// Initialize custom carousel navigation for latest videos
-function initLatestVideoCarousel(totalVideos) {
-  var $track = $("#latest-videos-track");
-  var $items = $track.find(".carousel-video-item");
+// Track current filter values globally
+var currentFilters = { topic: "", sort: "" };
 
-  if ($items.length === 0) return;
+// Populate dropdowns dynamically
+function populateDropdowns(topics, sorts, selectedTopic, selectedSort) {
+  var capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+  var formatSort = (s) => s.split("_").map(capitalize).join(" ");
 
-  var currentIndex = 0;
+  currentFilters.topic = selectedTopic;
+  currentFilters.sort = selectedSort;
 
-  var getItemWidth = function () {
-    var item = $items[0];
-    var rect = item.getBoundingClientRect();
-    var style = window.getComputedStyle(item);
-    var marginRight = parseFloat(style.marginRight);
-    return rect.width + marginRight;
-  };
+  $(".box2 .dropdown-menu").empty().append(topics.map((t) => `<a class="dropdown-item" data-value="${t}">${capitalize(t)}</a>`));
+  $(".box3 .dropdown-menu").empty().append(sorts.map((s) => `<a class="dropdown-item" data-value="${s}">${formatSort(s)}</a>`));
 
-  var updateCarousel = function (animate) {
-    var itemWidth = getItemWidth();
-    var offset = currentIndex * itemWidth;
+  $(".box2 .dropdown-toggle span").text(capitalize(selectedTopic));
+  $(".box3 .dropdown-toggle span").text(formatSort(selectedSort));
 
-    if (animate === false) {
-      $track.css("transition", "none");
-      $track.css("transform", "translateX(-" + offset + "px)");
-      // Force reflow
-      $track[0].offsetHeight;
-      $track.css("transition", "transform 0.4s ease-in-out");
-    } else {
-      $track.css("transform", "translateX(-" + offset + "px)");
-    }
-  };
-
-  $("#carouselExampleControls3 .carousel-control-prev")
-    .off("click")
-    .on("click", function (e) {
-      e.preventDefault();
-      currentIndex--;
-
-      if (currentIndex < 0) {
-        currentIndex = totalVideos - 1;
-        updateCarousel(false);
-        return;
-      }
-
-      updateCarousel(true);
-    });
-
-  $("#carouselExampleControls3 .carousel-control-next")
-    .off("click")
-    .on("click", function (e) {
-      e.preventDefault();
-      currentIndex++;
-      updateCarousel(true);
-
-      if (currentIndex >= totalVideos) {
-        setTimeout(function () {
-          currentIndex = 0;
-          updateCarousel(false);
-        }, 400);
-      }
-    });
-
-  updateCarousel(false);
-
-  $(window).on("resize", function () {
-    updateCarousel(false);
+  $(".box2 .dropdown-item").off("click").on("click", function (e) {
+    e.preventDefault();
+    currentFilters.topic = $(this).attr("data-value");
+    $(".box2 .dropdown-toggle span").text($(this).text());
+    loadCourses($(".search-text-area").val(), currentFilters.topic, currentFilters.sort);
   });
+
+  $(".box3 .dropdown-item").off("click").on("click", function (e) {
+    e.preventDefault();
+    currentFilters.sort = $(this).attr("data-value");
+    $(".box3 .dropdown-toggle span").text($(this).text());
+    loadCourses($(".search-text-area").val(), currentFilters.topic, currentFilters.sort);
+  });
+
+  $(".search-text-area").off("input").on("input", function () {
+    loadCourses($(this).val(), currentFilters.topic, currentFilters.sort);
+  });
+}
+
+// Display courses
+function displayCourses(courses) {
+  var $container = $(".results .row").empty();
+  $.each(courses, (_, c) =>
+    $container.append(createVideoCard(c).removeClass("carousel-video-item"))
+  );
 }
